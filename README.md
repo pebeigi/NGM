@@ -2,7 +2,9 @@
 
 <p align="center">
   <img alt="TRR Under Review" src="https://img.shields.io/static/v1?label=TRR&message=Under%20Review&color=green&style=flat-square">&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="[https://catalog.data.gov/dataset/third-generation-simulation-data-tgsim-foggy-bottom-trajectories](https://data.transportation.gov/stories/s/Third-Generation-Simulation-Data-TGSIM-/uwv8-dpvx/)"><img alt="Data" src="https://img.shields.io/static/v1?label=Data&message=TGSIM&color=blue&style=flat-square"></a>
+  <a href="https://data.transportation.gov/stories/s/Third-Generation-Simulation-Data-TGSIM-/uwv8-dpvx/">
+  <img alt="Data" src="https://img.shields.io/static/v1?label=Data&message=TGSIM&color=blue&style=flat-square">
+</a>
 </p>
 
 The **NGM Project** is an end-to-end research framework for **calibrating and simulating
