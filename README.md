@@ -1,4 +1,9 @@
-# Next Generation Modeling (NGM) Project
+<h1 align="center">Next Generation Modeling (NGM)</h1>
+
+<p align="center">
+  <img alt="TRR Under Review" src="https://img.shields.io/static/v1?label=TRR&message=Under%20Review&color=green&style=flat-square">&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="[https://catalog.data.gov/dataset/third-generation-simulation-data-tgsim-foggy-bottom-trajectories](https://data.transportation.gov/stories/s/Third-Generation-Simulation-Data-TGSIM-/uwv8-dpvx/)"><img alt="Data" src="https://img.shields.io/static/v1?label=Data&message=TGSIM&color=blue&style=flat-square"></a>
+</p>
 
 The **NGM Project** is an end-to-end research framework for **calibrating and simulating
 next-generation transportation behavior models**. It covers the full pipeline — from raw vehicle and
