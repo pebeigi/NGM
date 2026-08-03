@@ -802,10 +802,18 @@ def genetic_algorithm():
         population = [ind for ind, _ in population_sorted]
 
         current_best_error = population_sorted[0][1][1]["Total Difference"]
-        if current_best_error < best_error:
+        if np.isfinite(current_best_error) and current_best_error < best_error:
             best_error = current_best_error
             best_individual = population_sorted[0][0]
             best_metrics = population_sorted[0][1][1]
+        elif best_individual is None and population_sorted:
+            best_individual = population_sorted[0][0]
+            best_metrics = population_sorted[0][1][1]
+            best_error = (
+                current_best_error
+                if np.isfinite(current_best_error)
+                else float("inf")
+            )
 
         parents = population[: len(population) // 2]
         children = []
@@ -815,6 +823,8 @@ def genetic_algorithm():
             children.extend([mutate(child1), mutate(child2)])
         population = parents + children[: population_size - len(parents)]
 
+    if best_individual is None:
+        return None, best_error, best_metrics
     return clip_idm_params(best_individual), best_error, best_metrics
 
 

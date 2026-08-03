@@ -656,6 +656,12 @@ def extract_subject_and_leader_data(
 # ---------------------------------------------------------------------------
 # PT + GA (same structure as PT_CF_Calibration.py)
 # ---------------------------------------------------------------------------
+def _gaussian_pdf(z: float) -> float:
+    """Standard normal PDF; clip exponent to avoid overflow for large |z|."""
+    z2 = min(float(z) * float(z), 700.0)
+    return (1.0 / math.sqrt(2.0 * math.pi)) * math.exp(-0.5 * z2)
+
+
 def pt_acceleration(i, t, vehicle, accl_max, v_desired, Gamma1, Gamma2, Wm, Wc,
                     Tmax_, Alpha, Beta, Tcorr, RT, prng):
     """Prospect Theory car-following acceleration (Talebpour et al.; PT_CF_Calibration.py)."""
@@ -699,12 +705,17 @@ def pt_acceleration(i, t, vehicle, accl_max, v_desired, Gamma1, Gamma2, Wm, Wc,
             Uptdoubleprime = -Wm * Gamma2 * (Gamma2 - 1) * math.pow(-X, Gamma2 - 2)
 
         Z = (deltav + (0.5 * X * Tau) - (Seff / Tau)) / (Alpha_ * deltav)
-        fn = (1.0 / np.sqrt(2.0 * np.pi)) * np.exp(-Z ** 2.0 / 2.0)
+        fn = _gaussian_pdf(Z)
         F = Uptprime - Wc * fn * Zprime
         Fprime = Uptdoubleprime - Wc * fn * (Z * math.pow(Zprime, 2.0) + Zdoubleprime)
-        if Fprime == 0:
+        if not np.isfinite(Fprime) or Fprime == 0:
             Fprime = 1e-12
-        Astar = Astar - (F / Fprime)
+        step = F / Fprime
+        if not np.isfinite(step):
+            break
+        Astar = Astar - step
+        if not np.isfinite(Astar):
+            break
 
     X = Astar
     if X >= 0:
@@ -715,12 +726,14 @@ def pt_acceleration(i, t, vehicle, accl_max, v_desired, Gamma1, Gamma2, Wm, Wc,
         Uptdoubleprime = -Wm * Gamma2 * (Gamma2 - 1) * ((-X) ** max(Gamma2 - 2, 0))
 
     Z = (deltav + (0.5 * Astar * Tau) - (Seff / Tau)) / (Alpha_ * deltav)
-    fn = (1.0 / np.sqrt(2.0 * np.pi)) * np.exp(-Z ** 2.0 / 2.0)
+    fn = _gaussian_pdf(Z)
     Fprime = Uptdoubleprime - Wc * fn * (Z * math.pow(Zprime, 2.0) + Zdoubleprime)
-    if Fprime == 0:
+    if not np.isfinite(Fprime) or Fprime == 0:
         Fprime = 1e-12
 
     Var = -1.0 / (Beta * Fprime)
+    if not np.isfinite(Var):
+        Var = 0.0
     Random_Wiener = float(prng.random())
     Yt = math.exp(-0.1 / Tau) + math.sqrt(24.0 * 0.1 / Tau) * Random_Wiener
 
@@ -728,6 +741,8 @@ def pt_acceleration(i, t, vehicle, accl_max, v_desired, Gamma1, Gamma2, Wm, Wc,
     accl_ff = accl_max * (1.0 - speed / v_desired)
     accl_ = float(np.minimum(accl_cf, accl_ff))
     accl_ = float(np.clip(accl_, -8.0, 3.0))
+    if not np.isfinite(accl_):
+        accl_ = 0.0
     return accl_, fn, Wc * fn
 
 
@@ -809,6 +824,17 @@ def fitness(params):
     nrmse_position = rmse_position / pos_span
     nrmse_speed = rmse_speed / spd_span
     total_diff = weight_position * nrmse_position + weight_speed * nrmse_speed
+    if not np.isfinite(total_diff):
+        return 0.0, {
+            "MSE": float("inf"),
+            "RMSE": float("inf"),
+            "MAE": float("inf"),
+            "MAPE": float("inf"),
+            "NRMSE": float("inf"),
+            "SSE": float("inf"),
+            "R-squared": float("nan"),
+            "Total Difference": float("inf"),
+        }
     mse_position = rmse_position ** 2
     mse_speed = rmse_speed ** 2
     mse = mse_position + mse_speed
@@ -887,10 +913,18 @@ def genetic_algorithm():
         population = [ind for ind, _ in population_sorted]
 
         current_best_error = population_sorted[0][1][1]["Total Difference"]
-        if current_best_error < best_error:
+        if np.isfinite(current_best_error) and current_best_error < best_error:
             best_error = current_best_error
             best_individual = population_sorted[0][0]
             best_metrics = population_sorted[0][1][1]
+        elif best_individual is None and population_sorted:
+            best_individual = population_sorted[0][0]
+            best_metrics = population_sorted[0][1][1]
+            best_error = (
+                current_best_error
+                if np.isfinite(current_best_error)
+                else float("inf")
+            )
 
         parents = population[: len(population) // 2]
         children = []
@@ -900,6 +934,8 @@ def genetic_algorithm():
             children.extend([mutate(child1), mutate(child2)])
         population = parents + children[: population_size - len(parents)]
 
+    if best_individual is None:
+        return None, best_error, best_metrics
     return clip_pt_params(best_individual), best_error, best_metrics
 
 
